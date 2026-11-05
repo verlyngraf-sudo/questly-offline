@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Questly (Offline)</title>
+<meta name="theme-color" content="#1a1b23">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<style>
+  /* ============ THEMES ============ */
+  body[data-theme="midnight"] { --bg:#1a1b23; --card:#23242e; --text:#e8e9ef; --muted:#9a9daa; --accent:#7b93ff; --danger:#ff6b6f; --border:#353745; --xp-bar:#7b93ff; --badge-bg:#2a2d3d; --badge-text:#9bb0ff; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 16px 40px; padding-bottom: calc(40px + env(safe-area-inset-bottom)); font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  input, select, textarea { font-size: 16px !important; }
+  .wrap { max-width: 720px; margin: 0 auto; }
+
+  /* HEADER & STATS */
+  .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .profile-info { display: flex; align-items: center; gap: 12px; }
+  .avatar-wrap { flex-shrink: 0; cursor: pointer; }
+  .avatar { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 22px; border: 2px solid var(--border); }
+  .header h1 { font-size: 1.3rem; margin: 0 0 2px; }
+  .sub { color: var(--muted); font-size: .85rem; margin: 0; }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 20px 0 16px; }
+  .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 10px; text-align: center; }
+  .stat-value { font-size: 1.3rem; font-weight: 700; }
+  .stat-label { font-size: .7rem; color: var(--muted); text-transform: uppercase; }
+  .xp-wrap { margin-bottom: 12px; }
+  .xp-label { display: flex; justify-content: space-between; font-size: .85rem; margin-bottom: 4px; }
+  .xp-track { height: 10px; background: var(--border); border-radius: 99px; overflow: hidden; }
+  .xp-fill { height: 100%; width: 0%; background: var(--xp-bar); border-radius: 99px; transition: width .4s; }
+
+  /* FORMS & LISTS */
+  form#form { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; display: grid; gap: 10px; grid-template-columns: 1fr 1fr; margin-bottom: 20px; }
+  @media (max-width: 480px) { form#form { grid-template-columns: 1fr; } }
+  form#form input, form#form select, form#form button { font: inherit; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: inherit; min-width: 0; }
+  #title, form#form button { grid-column: 1 / -1; }
+  form#form button { background: var(--accent); color: #fff; border: none; font-weight: 600; cursor: pointer; }
+
+  ul#list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  li.item { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--prio-color, var(--border)); border-radius: 10px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; }
+  li.item.done { opacity: .45; }
+  li.item.done .title { text-decoration: line-through; }
+  .body { flex: 1; min-width: 0; }
+  .title { font-weight: 600; word-break: break-word; }
+  .meta { font-size: .8rem; color: var(--muted); margin-top: 2px; }
+  .del { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 1.1rem; padding: 4px; }
+  input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+
+  /* MODALS */
+  .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 2000; padding: 20px; align-items: center; justify-content: center; }
+  .modal-backdrop.open { display: flex; }
+  .modal { background: var(--bg); border: 1px solid var(--border); border-radius: 16px; max-width: 400px; width: 100%; padding: 24px; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+  .modal h2 { margin: 0 0 16px; font-size: 1.2rem; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+  .form-group label { font-size: .82rem; color: var(--muted); font-weight: 700; text-transform: uppercase; }
+  .form-group input { font: inherit; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text); }
+
+  .btn-primary { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 10px 16px; font-weight: 700; cursor: pointer; width: 100%; }
+  .btn-secondary { background: transparent; color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 8px; }
+</style>
+</head>
+<body data-theme="midnight">
+<div class="wrap">
+  <div class="header">
+    <div class="profile-info">
+      <div class="avatar-wrap" id="avatarWrap"><div class="avatar" id="headerAvatar">?</div></div>
+      <div>
+        <h1>📚 Questly</h1>
+        <p class="sub">Offline Edition</p>
+      </div>
+    </div>
+    <button class="btn-secondary" style="width:auto;" onclick="localStorage.clear(); location.reload();">Reset App</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat-card"><div class="stat-value" id="statLevel">1</div><div class="stat-label">Level</div></div>
+    <div class="stat-card"><div class="stat-value" id="statXP">0</div><div class="stat-label">Total XP</div></div>
+    <div class="stat-card"><div class="stat-value" id="statStreak">0 🔥</div><div class="stat-label">Day streak</div></div>
+  </div>
+
+  <div class="xp-wrap">
+    <div class="xp-label"><span>XP to next level</span><span id="xpText">0 / 100</span></div>
+    <div class="xp-track"><div class="xp-fill" id="xpFill"></div></div>
+  </div>
+
+  <form id="form">
+    <input id="title" placeholder="e.g. Chapter 5 problems 1–12" required autocomplete="off">
+    <select id="priority"><option value="3">🔴 High</option><option value="2" selected>🟡 Medium</option><option value="1">🟢 Low</option></select>
+    <button type="submit">Add homework ⚔️</button>
+  </form>
+
+  <ul id="list"></ul>
+</div>
+
+<!-- PROFILE MODAL -->
+<div class="modal-backdrop" id="profileBackdrop">
+  <div class="modal">
+    <h2>👤 Edit Profile</h2>
+    <div class="form-group">
+      <label>Your Name</label>
+      <input id="editName" placeholder="e.g. Alex" maxlength="20">
+    </div>
+    <button class="btn-primary" id="saveProfileBtn">Save</button>
+    <button class="btn-secondary" id="closeProfileBtn">Cancel</button>
+  </div>
+</div>
+
+<script>
+  // ============================================================
+  // OFFLINE LOCAL STORAGE LOGIC (NO FIREBASE)
+  // ============================================================
+  const KEY = 'questly-offline-v1';
+
+  let items = JSON.parse(localStorage.getItem(KEY + '-items')) || [];
+  let profile = JSON.parse(localStorage.getItem(KEY + '-profile')) || {
+    name: 'Student', avatar: '', xp: 0, streak: 0, lastCompletionDate: null
+  };
+
+  function save() {
+    localStorage.setItem(KEY + '-items', JSON.stringify(items));
+    localStorage.setItem(KEY + '-profile', JSON.stringify(profile));
+  }
+
+  function todayISO() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  function updateStreak() {
+    const today = todayISO();
+    if (profile.lastCompletionDate === today) return;
+
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yISO = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
+
+    if (profile.lastCompletionDate === yISO) {
+      profile.streak += 1;
+    } else {
+      profile.streak = 1;
+    }
+    profile.lastCompletionDate = today;
+  }
+
+  function renderStats() {
+    const lvl = Math.floor(profile.xp / 100) + 1;
+    document.getElementById('statLevel').textContent = lvl;
+    document.getElementById('statXP').textContent = profile.xp;
+    document.getElementById('statStreak').textContent = profile.streak + ' 🔥';
+
+    const inLvl = profile.xp % 100;
+    document.getElementById('xpText').textContent = `${inLvl} / 100`;
+    document.getElementById('xpFill').style.width = `${inLvl}%`;
+
+    const avatarEl = document.getElementById('headerAvatar');
+    if (profile.avatar) {
+      avatarEl.innerHTML = `<img src="${profile.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+    } else {
+      avatarEl.textContent = (profile.name || '?')[0].toUpperCase();
+    }
+  }
+
+  function renderList() {
+    const list = document.getElementById('list');
+    list.innerHTML = '';
+
+    // Sort: Unfinished first, then by priority
+    items.sort((a, b) => {
+      if (a.done !== b.done) return a.done ? 1 : -1;
+      return b.priority - a.priority;
+    });
+
+    items.forEach(item => {
+      const li = document.createElement('li');
+      li.className = 'item' + (item.done ? ' done' : '');
+      li.style.setProperty('--prio-color', item.priority === 3 ? '#e5484d' : item.priority === 2 ? '#f5a524' : '#30a46c');
+
+      li.innerHTML = `
+        <input type="checkbox" ${item.done ? 'checked' : ''}>
+        <div class="body">
+          <div class="title">${item.title}</div>
+          <div class="meta">${item.priority === 3 ? '🔴 High' : item.priority === 2 ? '🟡 Medium' : '🟢 Low'}</div>
+        </div>
+        <button class="del">✕</button>
+      `;
+
+      li.querySelector('input').onchange = (e) => {
+        item.done = e.target.checked;
+        if (item.done && !item.awarded) {
+          item.awarded = true;
+          const prevLvl = Math.floor(profile.xp / 100) + 1;
+
+          profile.xp += (item.priority === 3 ? 30 : item.priority === 2 ? 20 : 10);
+          updateStreak();
+
+          if (Math.floor(profile.xp / 100) + 1 > prevLvl) {
+            setTimeout(() => alert('🎉 LEVEL UP! You are now Level ' + (prevLvl + 1)), 100);
+          }
+        }
+        save(); renderStats(); renderList();
+      };
+
+      li.querySelector('.del').onclick = () => {
+        items = items.filter(i => i.id !== item.id);
+        save(); renderStats(); renderList();
+      };
+
+      list.appendChild(li);
+    });
+  }
+
+  document.getElementById('form').onsubmit = (e) => {
+    e.preventDefault();
+    const title = document.getElementById('title').value.trim();
+    if (!title) return;
+
+    items.push({
+      id: Date.now() + '-' + Math.random().toString(36).slice(2,8),
+      title: title,
+      priority: Number(document.getElementById('priority').value),
+      done: false,
+      awarded: false
+    });
+
+    save(); e.target.reset(); renderStats(); renderList();
+  };
+
+  // ============================================================
+  // PROFILE MODAL LOGIC
+  // ============================================================
+  const profileBackdrop = document.getElementById('profileBackdrop');
+
+  document.getElementById('avatarWrap').onclick = () => {
+    document.getElementById('editName').value = profile.name;
+    profileBackdrop.classList.add('open');
+  };
+
+  document.getElementById('closeProfileBtn').onclick = () => {
+    profileBackdrop.classList.remove('open');
+  };
+
+  document.getElementById('saveProfileBtn').onclick = () => {
+    profile.name = document.getElementById('editName').value.trim() || 'Student';
+    save(); renderStats();
+    profileBackdrop.classList.remove('open');
+  };
+
+  // Init
+  renderStats();
+  renderList();
+
+  // Register Service Worker for offline mode
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js');
+    });
+  }
+</script>
+</body>
+</html>
